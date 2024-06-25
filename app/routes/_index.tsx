@@ -1,4 +1,16 @@
-import type { MetaFunction } from "@remix-run/cloudflare";
+import type { LoaderFunction, MetaFunction } from "@remix-run/cloudflare";
+import { json } from "@remix-run/cloudflare";
+import { useLoaderData } from "@remix-run/react";
+
+interface Env {
+	DB: D1Database;
+}
+
+type Customer = {
+  CustomerID: number;
+  CompanyName: string;
+  ContactName: string;
+}
 
 export const meta: MetaFunction = () => {
   return [
@@ -10,31 +22,24 @@ export const meta: MetaFunction = () => {
   ];
 };
 
+export const loader: LoaderFunction = async ({ context, params }) => {
+  const env = context.cloudflare.env as Env;
+  const { results } = await env.DB.prepare("SELECT * FROM Customers").all<Customer>();
+  return json(results);
+}
+
 export default function Index() {
+  const customers = useLoaderData<typeof loader>() as Customer[];
+
   return (
     <div className="font-sans p-4">
       <h1 className="text-3xl">Welcome to Remix on Cloudflare</h1>
       <ul className="list-disc mt-4 pl-6 space-y-2">
-        <li>
-          <a
-            className="text-blue-700 underline visited:text-purple-900"
-            target="_blank"
-            href="https://remix.run/docs"
-            rel="noreferrer"
-          >
-            Remix Docs
-          </a>
-        </li>
-        <li>
-          <a
-            className="text-blue-700 underline visited:text-purple-900"
-            target="_blank"
-            href="https://developers.cloudflare.com/pages/framework-guides/deploy-a-remix-site/"
-            rel="noreferrer"
-          >
-            Cloudflare Pages Docs - Remix guide
-          </a>
-        </li>
+        {customers.map((customer) => (
+          <li key={customer.CustomerID}>
+            {customer.CompanyName}, {customer.ContactName}
+          </li>
+        ))}
       </ul>
     </div>
   );
